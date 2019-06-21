@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Rock Paper Scissors</title>
+     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<style>
+.clearfix::after {
+    content: "";
+    clear: both;
+    display: table;
+}
+</style>
+  </head>
+  <body>
+    <h2>Rock Paper Scissors 0.1</h2>
+
+
+    <section id='login_form_section' style="display:none;">
+    <form id="initial_login_form" name="initial_login_form">
+    <input type="text" name="name" placeholder="Your Name"><br/>
+    <input type="email" name="email" placeholder="Your Email or Mobile" ><br/>
+    
+    <button onclick="post_login_detail();return false;">Let's Start</button>
+    </form>
+    </section>
+
+
+
+    <section id='game_state_section'>
+      <h1 id='name_val'>Game Screen</h1>
+<table style="border-style: solid; width: 80%; text-align: center; padding: 0 40px 0 40px; margin-bottom: 60px;">
+  <tr>
+    <td>Player Wins:</td><td><span id="player_win_val"></span></td>
+    <td>Computer Wins:</td><td><span id="computer_win_val"></span></td>
+  </tr>
+<tr>
+    <td>Level:</td><td><span id="level_val"></span></td>
+    <td>Wins to next level:</td><td><span id="wins_to_next_level_val"></span></td>
+  </tr>
+</table>
+<!--
+      <div id='game-board' style='visibility: hidden;'>
+        <div id='top-row' class='row clearfix' >
+          <div id='' style="display: block; height: 100px; width: 20%; background-color: red; float: left; padding: 10px; margin: 5px;"></div>
+          <div id='' style="display: block; height: 100px; width: 20%; background-color: red; float: left; padding: 10px;margin: 5px;"></div>
+          <div id='' style="display: block; height: 100px; width: 20%; background-color: red; float: left; padding: 10px;margin: 5px;"></div>
+        </div>
+        <div id='top-row' class='row clearfix' >
+          <div id='' style="display: block; height: 100px; width: 20%; background-color: red; float: left; padding: 10px; margin: 5px;"></div>
+          <div id='' style="display: block; height: 100px; width: 20%; background-color: red; float: left; padding: 10px;margin: 5px;"></div>
+          <div id='' style="display: block; height: 100px; width: 20%; background-color: red; float: left; padding: 10px;margin: 5px;"></div>
+        </div>
+        <div id='top-row' class='row clearfix' >
+          <div id='' style="display: block; height: 100px; width: 20%; background-color: red; float: left; padding: 10px; margin: 5px;"></div>
+          <div id='' style="display: block; height: 100px; width: 20%; background-color: red; float: left; padding: 10px;margin: 5px;"></div>
+          <div id='' style="display: block; height: 100px; width: 20%; background-color: red; float: left; padding: 10px;margin: 5px;"></div>
+        </div>
+        <button onclick="do_animate()">Animate</button>
+      </div>
+      
+      <canvas width=800 height=600 id='canvas' style="background-color: yellow;">canvas not supported - go get Chrome!</canvas>
+      -->
+      <div id='simple-game-board'></div>
+      
+    </section>
+  
+  
+  
+  
+  </body>
+<script>
+
+function do_animate()
+{
+    console.log('start animate');
+}
+
+var game = <%== $initial_game %>;
+
+/** as per https://plainjs.com/javascript/ajax/send-ajax-get-and-post-requests-47/ **/
+function postAjax(url, data, success) {
+    var params = typeof data == 'string' ? data : Object.keys(data).map(
+            function(k){ return encodeURIComponent(k) + '=' + encodeURIComponent(data[k]) }
+        ).join('&');
+
+    var xhr = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
+    xhr.open('POST', url);
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState>3 && xhr.status==200) { success(xhr.responseText); }
+        else if (xhr.readyState>3 && xhr.status!=200) { console.log('error:' + xhr.responseText ); }
+    };
+    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.send(params);
+    return xhr;
+}
+// example request
+// postAjax('http://foo.bar/', 'p1=1&p2=Hello+World', function(data){ console.log(data); });
+// example request with data object
+// postAjax('http://foo.bar/', { p1: 1, p2: 'Hello World' }, function(data){ console.log(data); });
+
+
+function post_login_detail() 
+{
+
+    /** reformat form data object into object suitable for POST as per https://stackoverflow.com/a/46774073/2779629 **/
+    var form = new FormData(  document.querySelector("#initial_login_form") );
+    var object = {};
+    form.forEach((value, key) => {object[key] = value});
+    
+    postAjax('/post_user_details', 
+            object, // contains name and email
+            function(data){ 
+                game = JSON.parse( data);
+                console.log(  'game = ' + game);
+                render_screen();
+            }
+        );        
+}
+
+function post_player_choice( choice ) 
+{
+    postAjax('/post_player_choice', 
+            { "player_choice": choice }, // contains name and email
+            function(data){ 
+                game = JSON.parse( data);
+                console.log(  'game = ' + JSON.stringify(game));
+                render_screen();
+            }
+        );      
+}
+
+function no_session_yet() 
+{
+    // return true;
+    return game ==null;
+}
+
+function render_screen() 
+{ /* called on page load and whenever there is an event that should result in screen redraw */
+
+  if (  no_session_yet() )
+  {
+      document.getElementById("game_state_section").style.display = "none";
+      document.getElementById("login_form_section").style.display = "block";
+
+  } 
+  else // display game state
+  {
+      document.getElementById("game_state_section").style.display = "block";
+      document.getElementById("login_form_section").style.display = "none";
+      document.getElementById("simple-game-board").innerHTML =  game.as_text;
+
+      document.getElementById("player_win_val").innerHTML = game.player_wins;
+      document.getElementById("computer_win_val").innerHTML = game.computer_wins;
+      document.getElementById("level_val").innerHTML = game.level;
+      document.getElementById("wins_to_next_level_val").innerHTML = 5 - game.level_wins;
+      document.getElementById("name_val").innerHTML =  game.name;
+
+  }
+}
+
+
+(function() {
+    console.log('Started using template 01');
+    render_screen();
+
+})();
+</script>
+</html>
